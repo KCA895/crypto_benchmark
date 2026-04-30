@@ -6,7 +6,6 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305, AESGCM
 
 def run_benchmark():
-    # Variasi ukuran payload sesuai permintaan reviewer
     payload_sizes = {
         "1KB": 1024,
         "10KB": 10240,
@@ -15,7 +14,7 @@ def run_benchmark():
     }
     
     iterations = 1000
-    warmup = 10 # Pemanasan untuk menghilangkan noise awal
+    warmup = 10 
     results = []
 
     print("Generating keys...")
@@ -34,9 +33,6 @@ def run_benchmark():
         print(f"Testing Payload Size: {size_name}...")
         data = os.urandom(size_bytes)
 
-        # ---------------------------------------------------------
-        # 1. FERNET (AES-128-CBC + HMAC + Base64)
-        # ---------------------------------------------------------
         f_enc_sample = f.encrypt(data)
         f_overhead = ((len(f_enc_sample) - size_bytes) / size_bytes) * 100
         
@@ -47,7 +43,7 @@ def run_benchmark():
             dec = f.decrypt(enc)
             end = time.perf_counter()
             if i >= warmup:
-                f_latencies.append((end - start) * 1000) # Convert to ms
+                f_latencies.append((end - start) * 1000) 
 
         results.append({
             "Algorithm": "Fernet",
@@ -58,17 +54,13 @@ def run_benchmark():
             "Overhead (%)": round(f_overhead, 2)
         })
 
-        # ---------------------------------------------------------
-        # 2. ChaCha20-Poly1305 (Raw AEAD)
-        # ---------------------------------------------------------
         nonce_c = os.urandom(12)
         c_enc_sample = chacha.encrypt(nonce_c, data, None)
-        # Overhead AEAD = MAC tag (16 bytes) + Nonce (12 bytes) yang dikirim bersama payload
         c_overhead = (((len(c_enc_sample) + len(nonce_c)) - size_bytes) / size_bytes) * 100
 
         c_latencies = []
         for i in range(iterations + warmup):
-            nonce = os.urandom(12) # Generate nonce per encryption (best practice)
+            nonce = os.urandom(12) 
             start = time.perf_counter()
             enc = chacha.encrypt(nonce, data, None)
             dec = chacha.decrypt(nonce, enc, None)
@@ -85,9 +77,6 @@ def run_benchmark():
             "Overhead (%)": round(c_overhead, 2)
         })
 
-        # ---------------------------------------------------------
-        # 3. AES-GCM (Raw AEAD) - KOMPARATOR BARU
-        # ---------------------------------------------------------
         nonce_a = os.urandom(12)
         a_enc_sample = aesgcm.encrypt(nonce_a, data, None)
         a_overhead = (((len(a_enc_sample) + len(nonce_a)) - size_bytes) / size_bytes) * 100
@@ -111,7 +100,6 @@ def run_benchmark():
             "Overhead (%)": round(a_overhead, 2)
         })
 
-    # Output Results
     df = pd.DataFrame(results)
     print("\n--- BENCHMARK RESULTS ---")
     print(df.to_string(index=False))
